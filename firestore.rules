@@ -1,0 +1,71 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Global Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Primitive Helpers
+    function isSignedIn() { return request.auth != null; }
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+    function existing() { return resource.data; }
+    function incoming() { return request.resource.data; }
+    function isAdmin() { 
+      return isSignedIn() && 
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "admin"; 
+    }
+
+    // Validation Blueprint for Products
+    function isValidProduct(data) {
+      return data.size() >= 7 &&
+             data.keys().hasAll(["name", "price", "img", "type", "concern", "ingredient", "stock"]) &&
+             data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+             data.price is string && data.price.size() > 0 && data.price.size() <= 20 &&
+             data.img is string && data.img.size() > 0 && data.img.size() <= 200 &&
+             data.type is list && data.type.size() <= 20 &&
+             data.concern is list && data.concern.size() <= 20 &&
+             data.ingredient is list && data.ingredient.size() <= 20 &&
+             data.stock is number && data.stock >= 0;
+    }
+
+    // Validation Blueprint for Users
+    function isValidUser(data) {
+      return data.size() >= 2 &&
+             data.keys().hasAll(["role", "email"]) &&
+             data.role is string && (data.role == "user" || data.role == "admin") &&
+             data.email is string && data.email.size() <= 200;
+    }
+
+    // Product Paths
+    match /products/{productId} {
+      // Anyone can read products to view the catalog
+      allow read: if true;
+      allow list: if true;
+      // Only admins can create/update/delete products
+      allow create: if isAdmin() && isValidProduct(incoming()) && isValidId(productId);
+      allow update: if isAdmin() && isValidProduct(incoming()) && isValidId(productId) &&
+                       incoming().diff(existing()).affectedKeys().hasAny(["name", "price", "img", "type", "concern", "ingredient", "stock"]);
+      allow delete: if isAdmin() && isValidId(productId);
+    }
+
+    // User Paths
+    match /users/{userId} {
+      // User can read their own profile, Admins can read all
+      allow get: if (isSignedIn() && request.auth.uid == userId) || isAdmin();
+      allow list: if isAdmin();
+      // Users can only be created by themselves upon registration, defaulting to "user" role unless specified explicitly (admins bootstrap)
+      allow create: if isSignedIn() && request.auth.uid == userId && isValidUser(incoming()) && isValidId(userId);
+      // Only admin can upgrade someone to admin. Users can update their email/name? Let's restrict it to admin for role changes.
+      allow update: if isAdmin() && isValidUser(incoming()) && isValidId(userId);
+      allow delete: if isAdmin() && isValidId(userId);
+    }
+
+    // Test connection path
+    match /test/connection {
+      allow read: if true;
+    }
+  }
+}

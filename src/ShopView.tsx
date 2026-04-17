@@ -1,5 +1,6 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { Search, ShoppingBag } from 'lucide-react';
 import { translations, Language } from './i18n';
 import { useAppStore } from './store';
 
@@ -11,13 +12,23 @@ const CATEGORIES = {
 
 export default function ShopView({ lang }: { lang: Language }) {
   const t = translations[lang];
-  const { products, trackProductView } = useAppStore();
+  const { products, trackProductView, searchQuery, setSearchQuery, addToCart } = useAppStore();
   
   const [activeFilters, setActiveFilters] = useState<{ [key: string]: string[] }>({
     hairType: [],
     concern: [],
     ingredient: []
   });
+  
+  // Debounced search internal state
+  const [localSearch, setLocalSearch] = useState(searchQuery);
+  
+  useEffect(() => {
+    const timer = setTimeout(() => setSearchQuery(localSearch), 300);
+    return () => clearTimeout(timer);
+  }, [localSearch, setSearchQuery]);
+  
+  useEffect(() => setLocalSearch(searchQuery), [searchQuery]);
 
   const handleFilterToggle = (category: string, value: string) => {
     setActiveFilters(prev => {
@@ -36,12 +47,21 @@ export default function ShopView({ lang }: { lang: Language }) {
 
   const filteredProducts = useMemo(() => {
     return products.filter(p => {
+      // 1. Check Search Match
+      const searchMatch = !searchQuery || 
+        p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        p.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        p.ingredient.some(i => i.toLowerCase().includes(searchQuery.toLowerCase()));
+        
+      if (!searchMatch) return false;
+
+      // 2. Check Filters Match
       const typeMatch = activeFilters.hairType.length === 0 || p.type.some(t => activeFilters.hairType.includes(t));
       const concernMatch = activeFilters.concern.length === 0 || p.concern.some(c => activeFilters.concern.includes(c));
       const ingMatch = activeFilters.ingredient.length === 0 || p.ingredient.some(i => activeFilters.ingredient.includes(i));
       return typeMatch && concernMatch && ingMatch;
     });
-  }, [activeFilters]);
+  }, [activeFilters, products, searchQuery]);
 
   return (
     <div className="flex-grow grid grid-cols-1 md:grid-cols-[240px_1fr] gap-10 p-4 md:p-8 lg:p-10 max-w-[1600px] mx-auto w-full">
@@ -83,15 +103,32 @@ export default function ShopView({ lang }: { lang: Language }) {
       
       {/* Products Grid */}
       <div>
-        <div className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-end gap-2 border-b border-brand-ink/10 pb-4 md:pb-6 md:border-none">
-          <h2 className="font-serif text-3xl md:text-5xl">{t.shopAll}</h2>
-          <span className="text-[10px] uppercase tracking-widest text-brand-ink/40">
-            {filteredProducts.length} {(t as any).results}
-          </span>
+        <div className="mb-8 flex flex-col gap-4 border-b border-brand-ink/10 pb-6 md:border-none">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 w-full">
+            <h2 className="font-serif text-3xl md:text-5xl">{t.shopAll}</h2>
+            
+            {/* Search Bar */}
+            <div className="relative w-full md:w-64 lg:w-80">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 opacity-40 rtl:left-auto rtl:right-4" size={16} />
+              <input 
+                type="text" 
+                placeholder="Search products, ingredients..." 
+                value={localSearch}
+                onChange={(e) => setLocalSearch(e.target.value)}
+                className="w-full bg-brand-image/50 border border-brand-ink/10 rounded-full py-2.5 pl-10 pr-4 rtl:pl-4 rtl:pr-10 text-sm focus:outline-none focus:border-brand-accent transition-colors"
+              />
+            </div>
+          </div>
+          
+          <div className="flex justify-between items-center w-full">
+            <span className="text-[10px] uppercase tracking-widest text-brand-ink/40">
+              {filteredProducts.length} {(t as any).results}
+            </span>
+          </div>
         </div>
         
         {filteredProducts.length === 0 ? (
-          <div className="py-20 text-center text-brand-ink/50 font-serif text-xl md:text-2xl border border-brand-ink/5 bg-white/50">
+          <div className="py-20 text-center text-brand-ink/50 font-serif text-xl md:text-2xl border border-brand-ink/5 bg-brand-card/50">
             {(t as any).noResults}
           </div>
         ) : (
@@ -108,16 +145,20 @@ export default function ShopView({ lang }: { lang: Language }) {
                   className="flex flex-col group cursor-pointer"
                   onClick={() => trackProductView(product.id)}
                 >
-                  <div className="w-full aspect-[4/5] bg-zinc-200 mb-4 relative overflow-hidden flex items-center justify-center">
+                  <div className="w-full aspect-[4/5] bg-brand-image mb-4 relative overflow-hidden flex items-center justify-center transition-colors duration-700">
                     <img 
                       src={`https://picsum.photos/seed/${product.img}/400/500`} 
                       alt={product.name} 
-                      className="absolute inset-0 w-full h-full object-cover grayscale mix-blend-multiply opacity-80 group-hover:scale-105 group-hover:grayscale-0 transition-all duration-700" 
+                      className="absolute inset-0 w-full h-full object-cover grayscale mix-blend-multiply opacity-80 dark:mix-blend-screen dark:opacity-50 group-hover:scale-105 group-hover:grayscale-0 group-hover:mix-blend-normal group-hover:opacity-100 dark:group-hover:mix-blend-normal dark:group-hover:opacity-100 transition-all duration-700" 
                       referrerPolicy="no-referrer" 
                     />
                     <div className="absolute bottom-4 start-4 end-4 translate-y-8 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300">
-                      <button className="w-full bg-brand-ink text-brand-bg py-3 text-[10px] uppercase tracking-widest font-bold hover:bg-brand-accent transition-colors">
-                        {(t as any).quickAdd}
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); addToCart(product.id); }}
+                        className="w-full bg-brand-ink text-brand-bg py-3 px-4 text-[10px] uppercase tracking-widest font-bold hover:bg-brand-accent transition-colors flex items-center justify-between"
+                      >
+                        <span>{(t as any).quickAdd}</span>
+                        <ShoppingBag size={14} />
                       </button>
                     </div>
                   </div>

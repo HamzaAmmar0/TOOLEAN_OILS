@@ -29,11 +29,13 @@ export default function App() {
   const [lang, setLang] = useState<Language>('EN');
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLangOpen, setIsLangOpen] = useState(false);
-  const [currentTab, setCurrentTab] = useState<'home' | 'shop'>('home');
+  const [currentTab, setCurrentTab] = useState<'home' | 'shop' | 'checkout'>('home');
   const [isAIModalOpen, setIsAIModalOpen] = useState(false);
+  const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isDark, setIsDark] = useState(false);
 
-  const { products, productViews } = useAppStore();
+  const { products, productViews, cart } = useAppStore();
   const [user] = auth ? useAuthState(auth) : [null];
 
   const t = translations[lang];
@@ -105,17 +107,15 @@ export default function App() {
           </motion.p>
         </div>
         <div className="flex items-center gap-2 md:gap-4 shrink-0">
-          <button 
-            onClick={() => setIsDark(!isDark)} 
-            className="hover:text-brand-accent transition-colors opacity-60 hover:opacity-100 flex items-center gap-1"
-          >
-            {isDark ? <Sun size={12} /> : <Moon size={12} />}
+          <button onClick={() => setIsSettingsOpen(true)} className="hover:text-brand-accent transition-colors flex items-center gap-2">
+            <Settings size={14} /> <span className="hidden md:inline uppercase tracking-widest text-[10px]">Settings</span>
           </button>
+          
           <span className="opacity-20 hidden md:inline">|</span>
+          
           {user ? (
             <div className="flex items-center gap-3">
               <span className="font-serif italic text-brand-accent truncate max-w-[100px] md:max-w-none">{user.displayName}</span>
-              <button onClick={logoutUser} className="hover:text-brand-accent transition-colors"><LogOut size={12}/></button>
             </div>
           ) : (
             <>
@@ -146,34 +146,38 @@ export default function App() {
         </div>
 
         <div className="flex items-center gap-6">
-          <button className="p-2 hover:bg-black/5 rounded-full transition-colors whitespace-nowrap">
+          <button onClick={() => setCurrentTab('shop')} className="p-2 hover:bg-brand-ink/5 rounded-full transition-colors whitespace-nowrap">
             <Search size={18} strokeWidth={1.5} />
           </button>
-          <button className="p-2 hover:bg-black/5 rounded-full transition-colors relative">
+          <button onClick={() => setIsCartOpen(true)} className="p-2 hover:bg-brand-ink/5 rounded-full transition-colors relative">
             <ShoppingBag size={18} strokeWidth={1.5} />
-            <span className="absolute top-1 end-1 w-2 h-2 bg-brand-accent rounded-full border border-brand-bg" />
+            {cart.length > 0 && (
+              <span className="absolute top-1 end-1 w-2 h-2 bg-brand-accent rounded-full border border-brand-bg" />
+            )}
           </button>
-          <button className="lg:hidden p-2">
+          <button className="lg:hidden p-2 hover:bg-brand-ink/5 rounded-full transition-colors">
             <Menu size={20} strokeWidth={1.5} />
           </button>
         </div>
       </nav>
 
       {/* Main Content / Routing */}
-      {currentTab === 'home' ? (
+      {currentTab === 'checkout' ? (
+        <CheckoutView lang={lang} onBack={() => setCurrentTab('shop')} />
+      ) : currentTab === 'home' ? (
         <main className="flex-grow grid grid-cols-1 lg:grid-cols-[1.2fr_0.8fr] gap-8 lg:gap-10 p-4 md:p-8 lg:p-10 max-w-[1600px] mx-auto w-full">
           {/* Left: Hero/Collection */}
           <motion.section 
             initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
-          className="relative min-h-[400px] md:min-h-[500px] bg-[#EEE9E1] rounded overflow-hidden flex flex-col justify-end p-6 md:p-12 group"
+          className="relative min-h-[400px] md:min-h-[500px] bg-brand-hero rounded overflow-hidden flex flex-col justify-end p-6 md:p-12 group transition-colors duration-700"
         >
-          <div className="absolute inset-0 z-0 bg-gradient-to-br from-[#e0dcd4] to-[#c9c5bc]" />
+          <div className="absolute inset-0 z-0 bg-gradient-to-br from-brand-hero-from to-brand-hero-to transition-colors duration-700" />
           <img 
             src="https://picsum.photos/seed/hair-oil/1200/800" 
             alt="Product"
             referrerPolicy="no-referrer"
-            className="absolute inset-0 w-full h-full object-cover opacity-60 mix-blend-multiply transition-transform duration-1000 group-hover:scale-105"
+            className="absolute inset-0 w-full h-full object-cover opacity-60 mix-blend-multiply dark:opacity-30 dark:mix-blend-screen transition-transform duration-1000 group-hover:scale-105"
           />
           
           <div className="relative z-10 max-w-xl mt-32 md:mt-0">
@@ -185,7 +189,7 @@ export default function App() {
             </h1>
             <button 
               onClick={() => setCurrentTab('shop')}
-              className="bg-brand-ink text-white px-6 py-4 md:px-10 md:py-5 text-[10px] md:text-[11px] uppercase tracking-[0.15em] font-bold hover:bg-brand-accent transition-colors flex items-center gap-3 md:gap-4 w-fit"
+              className="bg-brand-ink text-brand-bg px-6 py-4 md:px-10 md:py-5 text-[10px] md:text-[11px] uppercase tracking-[0.15em] font-bold hover:bg-brand-accent transition-colors flex items-center gap-3 md:gap-4 w-fit"
             >
               {t.explore}
               <ChevronRight size={14} className="rtl:rotate-180 shrink-0" />
@@ -249,12 +253,12 @@ export default function App() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               {recommendedProducts.map((product, i) => (
                 <div key={product.id} className="flex gap-4 items-center group cursor-pointer" onClick={() => setCurrentTab('shop')}>
-                  <div className={`w-20 h-28 bg-zinc-200 rounded-sm overflow-hidden relative shrink-0`}>
+                  <div className={`w-20 h-28 bg-brand-image rounded-sm overflow-hidden relative shrink-0 transition-colors duration-700`}>
                     <img 
                       src={`https://picsum.photos/seed/${product.img}/200/300`} 
                       alt={product.name}
                       referrerPolicy="no-referrer"
-                      className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all"
+                      className="w-full h-full object-cover grayscale opacity-80 mix-blend-multiply dark:opacity-50 dark:mix-blend-screen group-hover:grayscale-0 group-hover:opacity-100 dark:group-hover:opacity-100 group-hover:mix-blend-normal dark:group-hover:mix-blend-normal transition-all"
                     />
                   </div>
                   <div className="flex flex-col">
@@ -299,6 +303,22 @@ export default function App() {
         languageName={t.languageName}
       />
 
+      <CartSidebar 
+        isOpen={isCartOpen} 
+        onClose={() => setIsCartOpen(false)} 
+        lang={lang} 
+        onCheckout={() => { setIsCartOpen(false); setCurrentTab('checkout'); }}
+      />
+
+      <SettingsView 
+        isOpen={isSettingsOpen} 
+        onClose={() => setIsSettingsOpen(false)} 
+        lang={lang} 
+        setLang={setLang}
+        isDark={isDark}
+        setIsDark={setIsDark}
+      />
+
       {/* Admin Panel Overlay (Demo) */}
       <AnimatePresence>
         {isAdmin && (
@@ -306,7 +326,7 @@ export default function App() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] bg-brand-ink/90 flex items-center justify-center p-4 md:p-6"
+            className="fixed inset-0 z-[100] bg-brand-overlay flex items-center justify-center p-4 md:p-6 transition-colors duration-700"
           >
             <motion.div 
               initial={{ scale: 0.9, opacity: 0 }}

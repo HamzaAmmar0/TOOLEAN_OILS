@@ -1,14 +1,21 @@
-@import url('https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400;1,700&family=Cairo:wght@200..1000&family=Playfair+Display:wght@400;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Alexandria:wght@100..900&family=Tajawal:wght@200;300;400;500;700;800;900&family=Playfair+Display:wght@400;600&display=swap');
 @import "tailwindcss";
+
+@custom-variant dark (&:is(.dark *));
 
 @theme {
   --color-brand-bg: var(--theme-bg);
   --color-brand-ink: var(--theme-ink);
   --color-brand-accent: var(--theme-accent);
   --color-brand-card: var(--theme-card);
+  --color-brand-hero: var(--theme-hero);
+  --color-brand-hero-from: var(--theme-hero-from);
+  --color-brand-hero-to: var(--theme-hero-to);
+  --color-brand-image: var(--theme-image);
+  --color-brand-overlay: var(--theme-overlay);
   
-  --font-serif: "Georgia", "Amiri", serif;
-  --font-sans: "Helvetica Neue", Helvetica, Arial, "Cairo", sans-serif;
+  --font-serif: "Georgia", "Alexandria", serif;
+  --font-sans: "Helvetica Neue", Helvetica, Arial, "Tajawal", sans-serif;
 
   --spacing-bar-height: 40px;
   --spacing-nav-height: 80px;
@@ -20,13 +27,23 @@
     --theme-ink: #1A1A1A;
     --theme-accent: #BFA37E;
     --theme-card: #FFFFFF;
+    --theme-hero: #EEE9E1;
+    --theme-hero-from: #e0dcd4;
+    --theme-hero-to: #c9c5bc;
+    --theme-image: #e4e4e7;
+    --theme-overlay: rgba(26, 26, 26, 0.9);
   }
 
   .dark {
     --theme-bg: #0F0F0F;
     --theme-ink: #F9F7F2;
     --theme-accent: #D4B889;
-    --theme-card: #1A1A1A;
+    --theme-card: #141414;
+    --theme-hero: #1A1A1A;
+    --theme-hero-from: #262626;
+    --theme-hero-to: #1A1A1A;
+    --theme-image: #27272a;
+    --theme-overlay: rgba(0, 0, 0, 0.9);
   }
 
   body {
